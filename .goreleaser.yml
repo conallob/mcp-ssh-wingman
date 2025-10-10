@@ -64,14 +64,14 @@ release:
   prerelease: auto
   name_template: "{{.ProjectName}} v{{.Version}}"
 
-homebrew_casks:
+brews:
   - name: mcp-ssh-wingman
     repository:
       owner: conallob
       name: homebrew-tap
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Casks
+    directory: Formula
     homepage: https://github.com/conallob/mcp-ssh-wingman
     description: "MCP Server for read-only access to Unix shell prompts via tmux"
     license: BSD-3-Clause
