@@ -4,9 +4,13 @@ BINARY_NAME=mcp-ssh-wingman
 BUILD_DIR=bin
 INSTALL_PATH=/usr/local/bin
 
+# Get version from git tag, or use "dev" if not on a tag
+VERSION ?= $(shell git describe --tags --exact-match 2>/dev/null || echo "dev")
+LDFLAGS=-ldflags "-X github.com/conall-obrien/mcp-ssh-wingman/internal/server.ServerVersion=$(VERSION)"
+
 build:
-	@echo "Building $(BINARY_NAME)..."
-	@go build -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/mcp-ssh-wingman
+	@echo "Building $(BINARY_NAME) version $(VERSION)..."
+	@go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/mcp-ssh-wingman
 
 clean:
 	@echo "Cleaning build artifacts..."

@@ -12,7 +12,11 @@ import (
 const (
 	ProtocolVersion = "2024-11-05"
 	ServerName      = "mcp-ssh-wingman"
-	ServerVersion   = "0.1.0"
+)
+
+var (
+	// ServerVersion is set via ldflags during build (e.g., -ldflags "-X github.com/conall-obrien/mcp-ssh-wingman/internal/server.Version=v1.0.0")
+	ServerVersion = "dev"
 )
 
 // Server represents the MCP server
