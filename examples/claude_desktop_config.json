@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ssh-wingman": {
+      "command": "/path/to/mcp-ssh-wingman",
+      "args": ["--session", "mcp-wingman"]
+    }
+  }
+}
