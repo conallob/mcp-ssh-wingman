@@ -10,15 +10,22 @@ import (
 )
 
 var (
-	sessionName = flag.String("session", "mcp-wingman", "tmux session name to attach to")
-	version     = flag.Bool("version", false, "print version and exit")
+	// Build-time variables set by GoReleaser
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+
+	sessionName  = flag.String("session", "mcp-wingman", "tmux session name to attach to")
+	versionFlag  = flag.Bool("version", false, "print version and exit")
 )
 
 func main() {
 	flag.Parse()
 
-	if *version {
-		fmt.Println("mcp-ssh-wingman v0.1.0")
+	if *versionFlag {
+		fmt.Printf("mcp-ssh-wingman %s\n", version)
+		fmt.Printf("  commit: %s\n", commit)
+		fmt.Printf("  built:  %s\n", date)
 		os.Exit(0)
 	}
 

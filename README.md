@@ -17,11 +17,27 @@ A Model Context Protocol (MCP) server that provides read-only access to Unix she
 
 ## Installation
 
+### Homebrew (macOS/Linux)
+
+```bash
+brew tap conallob/tap
+brew install mcp-ssh-wingman
+```
+
+### Pre-built binaries
+
+Download pre-built binaries from the [releases page](https://github.com/conallob/mcp-ssh-wingman/releases).
+
+Available for:
+- macOS (arm64/amd64)
+- Linux (arm64/amd64)
+- FreeBSD (arm64/amd64)
+
 ### Build from source
 
 ```bash
 # Clone the repository
-git clone https://github.com/conall-obrien/mcp-ssh-wingman.git
+git clone https://github.com/conallob/mcp-ssh-wingman.git
 cd mcp-ssh-wingman
 
 # Build
