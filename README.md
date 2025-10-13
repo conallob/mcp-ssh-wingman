@@ -29,6 +29,7 @@ brew install mcp-ssh-wingman
 Download pre-built binaries from the [releases page](https://github.com/conallob/mcp-ssh-wingman/releases).
 
 Available for:
+
 - macOS (arm64/amd64)
 - Linux (arm64/amd64)
 - FreeBSD (arm64/amd64)
@@ -78,11 +79,65 @@ Add the server to your Claude Desktop configuration file:
 
 Restart Claude Desktop after updating the configuration.
 
+### Integration with Gemini CLI
+
+Add this section to your Gemini config file (`~/.gemini/settings.json`):
+
+```json
+{
+  "mcpServers": {
+    "ssh-wingman": {
+      "command": "/usr/local/bin/mcp-ssh-wingman",
+      "args": ["--session", "mcp-wingman"]
+    }
+  }
+}
+```
+
+Run the `gemini` CLI and make sure it can see the MCP server:
+
+```shell
+> /mcp list
+
+Configured MCP servers:
+
+🟢 ssh-wingman - Ready (3 tools)
+  Tools:
+  - get_terminal_info
+  - read_scrollback
+  - read_terminal
+```
+
+Test with a prompt:
+
+```shell
+> using ssh-wingman MCP Server, what do you see in my session?
+
+ ╭────────────────────────────────────────────────────────────────────────────────────────╮
+ │ ?  read_terminal (ssh-wingman MCP Server) {} ←                                         │
+ │                                                                                        │
+ │   MCP Server: ssh-wingman                                                              │
+ │   Tool: read_terminal                                                                  │
+ │                                                                                        │
+ │ Allow execution of MCP tool "read_terminal" from server "ssh-wingma…                   │
+ │                                                                                        │
+ │ ● 1. Yes, allow once                                                                   │
+ │   2. Yes, always allow tool "read_terminal" from server "ssh-wingma…                   │
+ │   3. Yes, always allow all tools from server "ssh-wingman"                             │
+ │   4. No, suggest changes (esc)                                                         │
+ │                                                                                        │
+ ╰────────────────────────────────────────────────────────────────────────────────────────╯
+⠏ Waiting for user confirmation...
+```
+
+You might as well select option 3 there.
+
 ## Available Tools
 
 The server exposes the following MCP tools:
 
 ### `read_terminal`
+
 Read the current terminal content from the tmux session.
 
 ```json
@@ -92,6 +147,7 @@ Read the current terminal content from the tmux session.
 ```
 
 ### `read_scrollback`
+
 Read scrollback history from the tmux session.
 
 ```json
@@ -104,6 +160,7 @@ Read scrollback history from the tmux session.
 ```
 
 ### `get_terminal_info`
+
 Get information about the terminal (dimensions, current path, etc.).
 
 ```json
@@ -115,9 +172,11 @@ Get information about the terminal (dimensions, current path, etc.).
 ## Available Resources
 
 ### `terminal://current`
+
 Current terminal content as a text resource.
 
 ### `terminal://info`
+
 Terminal metadata and information.
 
 ## How It Works
