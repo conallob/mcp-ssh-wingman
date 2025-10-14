@@ -15,7 +15,9 @@ var (
 	commit  = "none"
 	date    = "unknown"
 
-	sessionName  = flag.String("session", "mcp-wingman", "tmux session name to attach to")
+	sessionName  = flag.String("session", "mcp-wingman", "terminal session name to attach to")
+	terminalType = flag.String("terminal", "tmux", "terminal multiplexer type: tmux or screen")
+	windowID     = flag.String("window", "", "specific window/pane ID to attach to (optional)")
 	versionFlag  = flag.Bool("version", false, "print version and exit")
 )
 
@@ -35,9 +37,17 @@ func main() {
 	// Log to stderr so it doesn't interfere with JSON-RPC on stdout
 	log.SetOutput(os.Stderr)
 
-	log.Printf("Starting MCP server for tmux session: %s", *sessionName)
+	// Validate terminal type
+	if *terminalType != "tmux" && *terminalType != "screen" {
+		log.Fatalf("Invalid terminal type: %s. Must be 'tmux' or 'screen'", *terminalType)
+	}
 
-	srv := server.NewServer(*sessionName, os.Stdin, os.Stdout)
+	log.Printf("Starting MCP server for %s session: %s", *terminalType, *sessionName)
+	if *windowID != "" {
+		log.Printf("Targeting specific window/pane: %s", *windowID)
+	}
+
+	srv := server.NewServer(*terminalType, *sessionName, *windowID, os.Stdin, os.Stdout)
 	if err := srv.Start(); err != nil {
 		log.Fatalf("Server error: %v", err)
 	}
