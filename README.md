@@ -1,11 +1,12 @@
 # MCP SSH Wingman
 
-A Model Context Protocol (MCP) server that provides read-only access to Unix shell prompts via tmux. This enables AI assistants like Claude to safely observe terminal environments without executing commands.
+A Model Context Protocol (MCP) server that provides read-only access to Unix shell prompts via tmux or GNU screen. This enables AI assistants like Claude to safely observe terminal environments without executing commands.
 
 ## Features
 
 - 🔒 **Read-only access** - Observe terminal content without execution risks
-- 🖥️ **tmux integration** - Leverages tmux's session management for reliable terminal access
+- 🖥️ **tmux & screen integration** - Leverages tmux or GNU screen session management for reliable terminal access
+- 📺 **Multiple window support** - Access different windows/panes within your terminal sessions
 - 📜 **Scrollback history** - Access historical terminal output
 - 📊 **Terminal metadata** - Retrieve dimensions, current path, and session info
 - 🔌 **MCP protocol** - Standard protocol for AI assistant integration
@@ -13,7 +14,8 @@ A Model Context Protocol (MCP) server that provides read-only access to Unix she
 ## Prerequisites
 
 - Go 1.21 or later
-- tmux
+- tmux (for tmux support)
+- GNU screen (for screen support)
 
 ## Installation
 
@@ -55,8 +57,14 @@ make install
 # Start with default tmux session name (mcp-wingman)
 ./bin/mcp-ssh-wingman
 
-# Use a custom tmux session name
-./bin/mcp-ssh-wingman --session my-session
+# Use tmux with a custom session name
+./bin/mcp-ssh-wingman --terminal tmux --session my-session
+
+# Use GNU screen with default session name
+./bin/mcp-ssh-wingman --terminal screen
+
+# Use GNU screen with custom session name and specific window
+./bin/mcp-ssh-wingman --terminal screen --session my-screen --window 2
 ```
 
 ### Integration with Claude Desktop
@@ -65,12 +73,37 @@ Add the server to your Claude Desktop configuration file:
 
 **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
+**For tmux:**
 ```json
 {
   "mcpServers": {
     "ssh-wingman": {
       "command": "/usr/local/bin/mcp-ssh-wingman",
-      "args": ["--session", "mcp-wingman"]
+      "args": ["--terminal", "tmux", "--session", "mcp-wingman"]
+    }
+  }
+}
+```
+
+**For GNU screen:**
+```json
+{
+  "mcpServers": {
+    "ssh-wingman": {
+      "command": "/usr/local/bin/mcp-ssh-wingman",
+      "args": ["--terminal", "screen", "--session", "mcp-wingman"]
+    }
+  }
+}
+```
+
+**For screen with specific window:**
+```json
+{
+  "mcpServers": {
+    "ssh-wingman": {
+      "command": "/usr/local/bin/mcp-ssh-wingman",
+      "args": ["--terminal", "screen", "--session", "my-screen", "--window", "2"]
     }
   }
 }
@@ -83,7 +116,7 @@ Restart Claude Desktop after updating the configuration.
 The server exposes the following MCP tools:
 
 ### `read_terminal`
-Read the current terminal content from the tmux session.
+Read the current terminal content from the tmux/screen session.
 
 ```json
 {
@@ -92,7 +125,7 @@ Read the current terminal content from the tmux session.
 ```
 
 ### `read_scrollback`
-Read scrollback history from the tmux session.
+Read scrollback history from the tmux/screen session.
 
 ```json
 {
@@ -112,6 +145,27 @@ Get information about the terminal (dimensions, current path, etc.).
 }
 ```
 
+### `list_windows`
+List all windows/panes in the current session.
+
+```json
+{
+  "name": "list_windows"
+}
+```
+
+### `set_window`
+Set the active window/pane for subsequent operations.
+
+```json
+{
+  "name": "set_window",
+  "arguments": {
+    "window_id": "2"
+  }
+}
+```
+
 ## Available Resources
 
 ### `terminal://current`
@@ -122,12 +176,21 @@ Terminal metadata and information.
 
 ## How It Works
 
-The server creates or attaches to a tmux session and uses tmux's built-in commands to safely read terminal content:
+The server creates or attaches to a tmux/screen session and uses their built-in commands to safely read terminal content:
 
-1. **Session Management**: Creates/attaches to a detached tmux session
-2. **Content Capture**: Uses `tmux capture-pane` to read visible content
-3. **Read-Only**: Never sends keystrokes or commands to the session
-4. **MCP Protocol**: Exposes terminal content via standard MCP tools and resources
+1. **Session Management**: Creates/attaches to a detached tmux or screen session
+2. **Content Capture**: Uses `tmux capture-pane` or `screen hardcopy` to read visible content
+3. **Multiple Windows**: Can switch between different windows/panes within the session
+4. **Read-Only**: Never sends keystrokes or commands to the session
+5. **MCP Protocol**: Exposes terminal content via standard MCP tools and resources
+
+### Screen-Specific Features
+
+For GNU screen users, the implementation provides:
+- **Existing Session Support**: Attach to your existing screen session with all your windows
+- **Window Navigation**: List and switch between different screen windows
+- **Backscroll Access**: Access your screen's scrollback buffer history
+- **Multi-Window Workflow**: Perfect for users who run local screen with multiple remote connections
 
 ## Development
 
