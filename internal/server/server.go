@@ -4,8 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/conall-obrien/mcp-ssh-wingman/internal/mcp"
+	"github.com/conall-obrien/mcp-ssh-wingman/internal/screen"
+	"github.com/conall-obrien/mcp-ssh-wingman/internal/terminal"
 	"github.com/conall-obrien/mcp-ssh-wingman/internal/tmux"
 )
 
@@ -21,25 +24,46 @@ var (
 
 // Server represents the MCP server
 type Server struct {
-	tmuxManager *tmux.Manager
-	reader      io.Reader
-	writer      io.Writer
+	terminalManager terminal.WindowManager
+	terminalType    string
+	reader          io.Reader
+	writer          io.Writer
 }
 
 // NewServer creates a new MCP server instance
-func NewServer(sessionName string, reader io.Reader, writer io.Writer) *Server {
+func NewServer(terminalType, sessionName, windowID string, reader io.Reader, writer io.Writer) *Server {
+	var manager terminal.WindowManager
+
+	switch terminalType {
+	case "screen":
+		screenManager := screen.NewManager(sessionName)
+		if windowID != "" {
+			screenManager.SetWindow(windowID)
+		}
+		manager = screenManager
+	case "tmux":
+		fallthrough
+	default:
+		tmuxManager := tmux.NewManager(sessionName)
+		if windowID != "" {
+			tmuxManager.SetWindow(windowID)
+		}
+		manager = tmuxManager
+	}
+
 	return &Server{
-		tmuxManager: tmux.NewManager(sessionName),
-		reader:      reader,
-		writer:      writer,
+		terminalManager: manager,
+		terminalType:    terminalType,
+		reader:          reader,
+		writer:          writer,
 	}
 }
 
 // Start begins the server message loop
 func (s *Server) Start() error {
-	// Ensure tmux session exists
-	if err := s.tmuxManager.EnsureSession(); err != nil {
-		return fmt.Errorf("failed to setup tmux session: %w", err)
+	// Ensure terminal session exists
+	if err := s.terminalManager.EnsureSession(); err != nil {
+		return fmt.Errorf("failed to setup terminal session: %w", err)
 	}
 
 	decoder := json.NewDecoder(s.reader)
@@ -137,41 +161,75 @@ func (s *Server) handleInitialize(request *mcp.JSONRPCRequest) (*mcp.InitializeR
 }
 
 func (s *Server) listTools() *mcp.ListToolsResult {
-	return &mcp.ListToolsResult{
-		Tools: []mcp.Tool{
-			{
-				Name:        "read_terminal",
-				Description: "Read the current terminal content from the tmux session",
-				InputSchema: mcp.InputSchema{
-					Type:       "object",
-					Properties: map[string]mcp.Property{},
-					Required:   []string{},
-				},
-			},
-			{
-				Name:        "read_scrollback",
-				Description: "Read scrollback history from the tmux session",
-				InputSchema: mcp.InputSchema{
-					Type: "object",
-					Properties: map[string]mcp.Property{
-						"lines": {
-							Type:        "number",
-							Description: "Number of lines of scrollback history to retrieve (default: 100)",
-						},
-					},
-					Required: []string{},
-				},
-			},
-			{
-				Name:        "get_terminal_info",
-				Description: "Get information about the terminal (dimensions, current path, etc.)",
-				InputSchema: mcp.InputSchema{
-					Type:       "object",
-					Properties: map[string]mcp.Property{},
-					Required:   []string{},
-				},
+	// Get dynamic scrollback settings for screen
+	defaultScrollback := screen.DefaultScrollback
+	maxScrollback := screen.DefaultScrollback
+	if s.terminalType == "screen" {
+		defaultScrollback, maxScrollback = screen.GetDefaultScrollback()
+	}
+
+	scrollbackDesc := fmt.Sprintf("Number of lines of scrollback history to retrieve (default: %d, max: %d)", defaultScrollback, maxScrollback)
+
+	tools := []mcp.Tool{
+		{
+			Name:        "read_terminal",
+			Description: fmt.Sprintf("Read the current terminal content from the %s session", s.terminalType),
+			InputSchema: mcp.InputSchema{
+				Type:       "object",
+				Properties: map[string]mcp.Property{},
+				Required:   []string{},
 			},
 		},
+		{
+			Name:        "read_scrollback",
+			Description: fmt.Sprintf("Read scrollback history from the %s session", s.terminalType),
+			InputSchema: mcp.InputSchema{
+				Type: "object",
+				Properties: map[string]mcp.Property{
+					"lines": {
+						Type:        "number",
+						Description: scrollbackDesc,
+					},
+				},
+				Required: []string{},
+			},
+		},
+		{
+			Name:        "get_terminal_info",
+			Description: "Get information about the terminal (dimensions, current path, etc.)",
+			InputSchema: mcp.InputSchema{
+				Type:       "object",
+				Properties: map[string]mcp.Property{},
+				Required:   []string{},
+			},
+		},
+		{
+			Name:        "list_windows",
+			Description: fmt.Sprintf("List all windows/panes in the %s session", s.terminalType),
+			InputSchema: mcp.InputSchema{
+				Type:       "object",
+				Properties: map[string]mcp.Property{},
+				Required:   []string{},
+			},
+		},
+		{
+			Name:        "set_window",
+			Description: fmt.Sprintf("Set the active window/pane in the %s session", s.terminalType),
+			InputSchema: mcp.InputSchema{
+				Type: "object",
+				Properties: map[string]mcp.Property{
+					"window_id": {
+						Type:        "string",
+						Description: "The window/pane ID to switch to",
+					},
+				},
+				Required: []string{"window_id"},
+			},
+		},
+	}
+
+	return &mcp.ListToolsResult{
+		Tools: tools,
 	}
 }
 
@@ -188,7 +246,7 @@ func (s *Server) callTool(request *mcp.JSONRPCRequest) (*mcp.CallToolResult, err
 
 	switch toolRequest.Name {
 	case "read_terminal":
-		content, err := s.tmuxManager.CapturePane()
+		content, err := s.terminalManager.CapturePane()
 		if err != nil {
 			return &mcp.CallToolResult{
 				Content: []mcp.Content{{Type: "text", Text: fmt.Sprintf("Error: %s", err)}},
@@ -200,7 +258,13 @@ func (s *Server) callTool(request *mcp.JSONRPCRequest) (*mcp.CallToolResult, err
 		}, nil
 
 	case "read_scrollback":
-		lines := 100 // default
+		defaultScrollback := screen.DefaultScrollback
+		maxScrollback := screen.DefaultScrollback
+		if s.terminalType == "screen" {
+			defaultScrollback, maxScrollback = screen.GetDefaultScrollback()
+		}
+
+		lines := defaultScrollback // use the appropriate default based on .screenrc
 		if linesVal, ok := toolRequest.Arguments["lines"]; ok {
 			switch v := linesVal.(type) {
 			case float64:
@@ -210,7 +274,12 @@ func (s *Server) callTool(request *mcp.JSONRPCRequest) (*mcp.CallToolResult, err
 			}
 		}
 
-		content, err := s.tmuxManager.GetScrollbackHistory(lines)
+		// Cap at configured scrollback limit
+		if lines > maxScrollback {
+			lines = maxScrollback
+		}
+
+		content, err := s.terminalManager.GetScrollbackHistory(lines)
 		if err != nil {
 			return &mcp.CallToolResult{
 				Content: []mcp.Content{{Type: "text", Text: fmt.Sprintf("Error: %s", err)}},
@@ -222,7 +291,7 @@ func (s *Server) callTool(request *mcp.JSONRPCRequest) (*mcp.CallToolResult, err
 		}, nil
 
 	case "get_terminal_info":
-		info, err := s.tmuxManager.GetPaneInfo()
+		info, err := s.terminalManager.GetPaneInfo()
 		if err != nil {
 			return &mcp.CallToolResult{
 				Content: []mcp.Content{{Type: "text", Text: fmt.Sprintf("Error: %s", err)}},
@@ -230,11 +299,44 @@ func (s *Server) callTool(request *mcp.JSONRPCRequest) (*mcp.CallToolResult, err
 			}, nil
 		}
 
-		infoText := fmt.Sprintf("Terminal Info:\n- Width: %s\n- Height: %s\n- Current Path: %s\n- Pane Index: %s",
-			info["width"], info["height"], info["current_path"], info["pane_index"])
+		infoText := fmt.Sprintf("Terminal Info (%s):\n- Width: %s\n- Height: %s\n- Current Path: %s\n- Window/Pane ID: %s",
+			s.terminalType, info["width"], info["height"], info["current_path"], s.terminalManager.GetWindow())
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{{Type: "text", Text: infoText}},
+		}, nil
+
+	case "list_windows":
+		windows, err := s.terminalManager.ListWindows()
+		if err != nil {
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{{Type: "text", Text: fmt.Sprintf("Error: %s", err)}},
+				IsError: true,
+			}, nil
+		}
+
+		var windowList strings.Builder
+		windowList.WriteString(fmt.Sprintf("Available windows/panes in %s session:\n", s.terminalType))
+		for _, window := range windows {
+			windowList.WriteString(fmt.Sprintf("- ID: %s, Name: %s\n", window["id"], window["name"]))
+		}
+
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{{Type: "text", Text: windowList.String()}},
+		}, nil
+
+	case "set_window":
+		windowID, ok := toolRequest.Arguments["window_id"].(string)
+		if !ok {
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{{Type: "text", Text: "Error: window_id must be a string"}},
+				IsError: true,
+			}, nil
+		}
+
+		s.terminalManager.SetWindow(windowID)
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{{Type: "text", Text: fmt.Sprintf("Switched to window/pane: %s", windowID)}},
 		}, nil
 
 	default:
@@ -274,7 +376,7 @@ func (s *Server) readResource(request *mcp.JSONRPCRequest) (*mcp.ReadResourceRes
 
 	switch resourceRequest.URI {
 	case "terminal://current":
-		content, err := s.tmuxManager.CapturePane()
+		content, err := s.terminalManager.CapturePane()
 		if err != nil {
 			return nil, err
 		}
@@ -289,12 +391,12 @@ func (s *Server) readResource(request *mcp.JSONRPCRequest) (*mcp.ReadResourceRes
 		}, nil
 
 	case "terminal://info":
-		info, err := s.tmuxManager.GetPaneInfo()
+		info, err := s.terminalManager.GetPaneInfo()
 		if err != nil {
 			return nil, err
 		}
-		infoText := fmt.Sprintf("Terminal Information:\n\nDimensions: %sx%s\nCurrent Path: %s\nPane Index: %s",
-			info["width"], info["height"], info["current_path"], info["pane_index"])
+		infoText := fmt.Sprintf("Terminal Information (%s):\n\nDimensions: %sx%s\nCurrent Path: %s\nWindow/Pane ID: %s",
+			s.terminalType, info["width"], info["height"], info["current_path"], s.terminalManager.GetWindow())
 
 		return &mcp.ReadResourceResult{
 			Contents: []mcp.ResourceContent{

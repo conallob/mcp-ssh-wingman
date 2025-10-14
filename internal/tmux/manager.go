@@ -153,3 +153,56 @@ func (m *Manager) KillSession() error {
 	cmd := exec.Command("tmux", "kill-session", "-t", m.sessionName)
 	return cmd.Run()
 }
+
+// ListWindows lists all windows in the tmux session (implements WindowManager interface)
+func (m *Manager) ListWindows() ([]map[string]string, error) {
+	var stdout bytes.Buffer
+
+	cmd := exec.Command("tmux", "list-windows", "-t", m.sessionName, "-F", "#{window_index},#{window_name}")
+	cmd.Stdout = &stdout
+
+	err := cmd.Run()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list windows: %w", err)
+	}
+
+	var windows []map[string]string
+	lines := strings.Split(strings.TrimSpace(stdout.String()), "\n")
+
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		parts := strings.Split(line, ",")
+		if len(parts) >= 2 {
+			windows = append(windows, map[string]string{
+				"id":   parts[0],
+				"name": parts[1],
+			})
+		}
+	}
+
+	return windows, nil
+}
+
+// SetWindow sets the window for this manager (implements WindowManager interface)
+func (m *Manager) SetWindow(windowID string) {
+	// For tmux, we can modify the session target to include window
+	if windowID != "" {
+		m.sessionName = fmt.Sprintf("%s:%s", strings.Split(m.sessionName, ":")[0], windowID)
+	}
+}
+
+// GetWindow returns the current window ID (implements WindowManager interface)
+func (m *Manager) GetWindow() string {
+	parts := strings.Split(m.sessionName, ":")
+	if len(parts) > 1 {
+		return parts[1]
+	}
+	return ""
+}
+
+// ListSessions lists all tmux sessions (implements SessionLister interface)
+func (m *Manager) ListSessions() ([]string, error) {
+	return ListSessions()
+}
