@@ -1,17 +1,69 @@
 package screen
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
 
 const (
-	SessionPrefix = "mcp-wingman"
+	SessionPrefix     = "mcp-wingman"
+	DefaultScrollback = 1000
 )
+
+// getScrollbackFromScreenrc reads the defscrollback setting from ~/.screenrc
+// Returns the value and whether it was found in the file
+func getScrollbackFromScreenrc() (int, bool) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return DefaultScrollback, false
+	}
+
+	screenrcPath := filepath.Join(homeDir, ".screenrc")
+	file, err := os.Open(screenrcPath)
+	if err != nil {
+		return DefaultScrollback, false
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if strings.HasPrefix(line, "defscrollback ") {
+			parts := strings.Fields(line)
+			if len(parts) >= 2 {
+				if scrollback, err := strconv.Atoi(parts[1]); err == nil {
+					return scrollback, true
+				}
+			}
+		}
+	}
+
+	return DefaultScrollback, false
+}
+
+// GetMaxScrollback returns the maximum scrollback lines configured
+func GetMaxScrollback() int {
+	scrollback, _ := getScrollbackFromScreenrc()
+	return scrollback
+}
+
+// GetDefaultScrollback returns the default scrollback lines and the max limit
+// If .screenrc has defscrollback, use that as default, otherwise use 1000
+func GetDefaultScrollback() (defaultLines int, maxLines int) {
+	configuredScrollback, found := getScrollbackFromScreenrc()
+	if found {
+		// User has configured defscrollback, use it as both default and max
+		return configuredScrollback, configuredScrollback
+	}
+	// No defscrollback found, default to 1000 but allow up to 1000
+	return DefaultScrollback, DefaultScrollback
+}
 
 // Manager handles screen session management
 type Manager struct {
@@ -81,13 +133,15 @@ func (m *Manager) CapturePane() (string, error) {
 	var stderr bytes.Buffer
 
 	// Use screen's hardcopy command to capture content
-	sessionTarget := m.sessionName
-	if m.windowID != "" {
-		sessionTarget = fmt.Sprintf("%s:%s", m.sessionName, m.windowID)
-	}
+	sessionName := m.sessionName
+	var cmd *exec.Cmd
 
-	// Create a temporary file for hardcopy output
-	cmd := exec.Command("screen", "-S", sessionTarget, "-X", "hardcopy", "/tmp/screen_capture")
+	if m.windowID != "" {
+		// Create a temporary file for hardcopy output
+		cmd = exec.Command("screen", "-S", sessionName, "-p", m.windowID, "-X", "hardcopy", "/tmp/screen_capture")
+	} else {
+		cmd = exec.Command("screen", "-S", sessionName, "-X", "hardcopy", "/tmp/screen_capture")
+	}
 	cmd.Stderr = &stderr
 
 	err := cmd.Run()
@@ -154,14 +208,14 @@ func (m *Manager) GetScrollbackHistory(lines int) (string, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	sessionTarget := m.sessionName
-	if m.windowID != "" {
-		sessionTarget = fmt.Sprintf("%s:%s", m.sessionName, m.windowID)
-	}
+	sessionName := m.sessionName
+	var cmd *exec.Cmd
 
-	// Use screen's hardcopy command with scrollback
-	// -h flag includes scrollback buffer
-	cmd := exec.Command("screen", "-S", sessionTarget, "-X", "hardcopy", "-h", "/tmp/screen_scrollback")
+	if m.windowID != "" {
+		cmd = exec.Command("screen", "-S", sessionName, "-p", m.windowID, "-X", "hardcopy", "-h", "/tmp/screen_scrollback")
+	} else {
+		cmd = exec.Command("screen", "-S", sessionName, "-X", "hardcopy", "-h", "/tmp/screen_scrollback")
+	}
 	cmd.Stderr = &stderr
 
 	err := cmd.Run()

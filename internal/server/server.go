@@ -161,6 +161,15 @@ func (s *Server) handleInitialize(request *mcp.JSONRPCRequest) (*mcp.InitializeR
 }
 
 func (s *Server) listTools() *mcp.ListToolsResult {
+	// Get dynamic scrollback settings for screen
+	defaultScrollback := screen.DefaultScrollback
+	maxScrollback := screen.DefaultScrollback
+	if s.terminalType == "screen" {
+		defaultScrollback, maxScrollback = screen.GetDefaultScrollback()
+	}
+
+	scrollbackDesc := fmt.Sprintf("Number of lines of scrollback history to retrieve (default: %d, max: %d)", defaultScrollback, maxScrollback)
+
 	tools := []mcp.Tool{
 		{
 			Name:        "read_terminal",
@@ -179,7 +188,7 @@ func (s *Server) listTools() *mcp.ListToolsResult {
 				Properties: map[string]mcp.Property{
 					"lines": {
 						Type:        "number",
-						Description: "Number of lines of scrollback history to retrieve (default: 100)",
+						Description: scrollbackDesc,
 					},
 				},
 				Required: []string{},
@@ -249,7 +258,13 @@ func (s *Server) callTool(request *mcp.JSONRPCRequest) (*mcp.CallToolResult, err
 		}, nil
 
 	case "read_scrollback":
-		lines := 100 // default
+		defaultScrollback := screen.DefaultScrollback
+		maxScrollback := screen.DefaultScrollback
+		if s.terminalType == "screen" {
+			defaultScrollback, maxScrollback = screen.GetDefaultScrollback()
+		}
+
+		lines := defaultScrollback // use the appropriate default based on .screenrc
 		if linesVal, ok := toolRequest.Arguments["lines"]; ok {
 			switch v := linesVal.(type) {
 			case float64:
@@ -257,6 +272,11 @@ func (s *Server) callTool(request *mcp.JSONRPCRequest) (*mcp.CallToolResult, err
 			case int:
 				lines = v
 			}
+		}
+
+		// Cap at configured scrollback limit
+		if lines > maxScrollback {
+			lines = maxScrollback
 		}
 
 		content, err := s.terminalManager.GetScrollbackHistory(lines)

@@ -25,7 +25,7 @@ For users who want to target a specific window in their screen session:
 {
   "mcpServers": {
     "ssh-wingman": {
-      "command": "/usr/local/bin/mcp-ssh-wingman", 
+      "command": "/usr/local/bin/mcp-ssh-wingman",
       "args": ["--terminal", "screen", "--session", "main", "--window", "1"]
     }
   }
