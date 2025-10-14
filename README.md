@@ -153,6 +153,11 @@ make clean
 - `internal/server/` - MCP server implementation
 - `examples/` - Configuration examples and test scripts
 
+
+## Features to Add
+
+- [zellij](https://github.com/zellij-org/zellij/) , once https://github.com/zellij-org/zellij/issues/4348 is implemented
+
 ## License
 
 BSD 3-Clause License - see [LICENSE](LICENSE) file for details.
