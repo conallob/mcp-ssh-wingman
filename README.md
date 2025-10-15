@@ -16,7 +16,7 @@ A Model Context Protocol (MCP) server that provides read-only access to Unix she
 
 Not in the immediate future. Although `screen` can be used for pair programming/debugging, it does not have any mechanism to enforce read only mode.
 
-Since the read-only safeguard is the main difference between this MCP and other [MCPs with ssh functionality](https://www.gnu.org/software/screen/)
+Since the read-only safeguard is the main difference between this MCP and other [MCPs with ssh functionality](https://www.gnu.org/software/screen/) , screen will need to support read-only sessions before it can be integrated
 
 ### Will you be adding [zellij](https://github.com/zellij-org/zellij/) support?
 
