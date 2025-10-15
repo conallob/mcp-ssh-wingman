@@ -12,8 +12,8 @@ A Model Context Protocol (MCP) server that provides read-only access to Unix she
 
 ## Prerequisites
 
-- Go 1.21 or later
-- tmux
+- tmux (for terminal session management)
+- (Optional) Go 1.21 or later (only needed for building from source)
 
 ## Installation
 
@@ -35,17 +35,7 @@ Available for:
 
 ### Build from source
 
-```bash
-# Clone the repository
-git clone https://github.com/conallob/mcp-ssh-wingman.git
-cd mcp-ssh-wingman
-
-# Build
-make build
-
-# Install to /usr/local/bin (optional)
-make install
-```
+See [DEVELOPMENT.md](DEVELOPMENT.md) for build instructions.
 
 ## Usage
 
@@ -53,10 +43,13 @@ make install
 
 ```bash
 # Start with default tmux session name (mcp-wingman)
-./bin/mcp-ssh-wingman
+mcp-ssh-wingman
 
 # Use a custom tmux session name
-./bin/mcp-ssh-wingman --session my-session
+mcp-ssh-wingman --session my-session
+
+# Show version
+mcp-ssh-wingman --version
 ```
 
 ### Integration with Claude Desktop
@@ -64,6 +57,7 @@ make install
 Add the server to your Claude Desktop configuration file:
 
 **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Linux**: `~/.config/Claude/claude_desktop_config.json`
 
 ```json
 {
@@ -85,6 +79,7 @@ The server exposes the following MCP tools:
 ### `read_terminal`
 Read the current terminal content from the tmux session.
 
+**Example:**
 ```json
 {
   "name": "read_terminal"
@@ -94,6 +89,10 @@ Read the current terminal content from the tmux session.
 ### `read_scrollback`
 Read scrollback history from the tmux session.
 
+**Parameters:**
+- `lines` (number): Number of lines to retrieve from scrollback buffer
+
+**Example:**
 ```json
 {
   "name": "read_scrollback",
@@ -106,6 +105,7 @@ Read scrollback history from the tmux session.
 ### `get_terminal_info`
 Get information about the terminal (dimensions, current path, etc.).
 
+**Example:**
 ```json
 {
   "name": "get_terminal_info"
@@ -129,29 +129,39 @@ The server creates or attaches to a tmux session and uses tmux's built-in comman
 3. **Read-Only**: Never sends keystrokes or commands to the session
 4. **MCP Protocol**: Exposes terminal content via standard MCP tools and resources
 
-## Development
+This approach ensures that the AI assistant can observe terminal activity without any risk of accidentally executing commands or modifying the terminal state.
 
-```bash
-# Run tests
-make test
+## Use Cases
 
-# Format code
-make fmt
+- Monitor long-running processes and build outputs
+- Observe terminal-based application behavior
+- Debug issues by reviewing terminal history
+- Provide context-aware assistance based on current terminal state
 
-# Lint code
-make vet
+## Security Considerations
 
-# Clean build artifacts
-make clean
-```
+MCP SSH Wingman is designed with security in mind:
 
-## Architecture
+- **Read-only**: The server never sends input to the terminal
+- **Local access**: Operates on local tmux sessions only
+- **No command execution**: Cannot execute shell commands
+- **Isolated sessions**: Each session is independent and sandboxed by tmux
 
-- `cmd/mcp-ssh-wingman/` - Main application entry point
-- `internal/mcp/` - MCP protocol type definitions
-- `internal/tmux/` - tmux session management
-- `internal/server/` - MCP server implementation
-- `examples/` - Configuration examples and test scripts
+## Troubleshooting
+
+### Server won't start
+- Ensure tmux is installed: `tmux -V`
+- Check that the binary has execute permissions: `chmod +x /usr/local/bin/mcp-ssh-wingman`
+
+### Claude Desktop can't connect
+- Verify the path to the binary in your configuration file
+- Check Claude Desktop logs for error messages
+- Ensure the binary runs successfully from command line first
+
+### Can't see terminal content
+- Verify the tmux session exists: `tmux list-sessions`
+- Ensure the session name matches the one specified in configuration
+- Check that the tmux session has active panes
 
 
 ## Features to Add
@@ -165,3 +175,5 @@ BSD 3-Clause License - see [LICENSE](LICENSE) file for details.
 ## Contributing
 
 Contributions are welcome! Please feel free to submit issues or pull requests.
+
+For development guidelines, see [DEVELOPMENT.md](DEVELOPMENT.md).

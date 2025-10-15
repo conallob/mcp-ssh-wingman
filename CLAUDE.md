@@ -6,13 +6,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 MCP SSH Wingman is an MCP (Model Context Protocol) Server written in Go that provides read-only access to Unix shell prompts via tmux. This allows AI assistants to safely observe terminal environments without executing commands.
 
-## Build and Development
+## Documentation
+
+- **[README.md](README.md)** - User-facing documentation including installation, usage, and configuration
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Developer documentation including build instructions, architecture, and contribution guidelines
+
+## Quick Reference
 
 ### Prerequisites
 - Go 1.21 or later
 - tmux (for terminal session management)
 
-### Build Commands
+### Common Commands
 ```bash
 # Build the binary
 make build
@@ -42,16 +47,15 @@ go clean
 ./bin/mcp-ssh-wingman --version
 ```
 
-## Architecture
+## Project Structure
 
-### Project Structure
 - `cmd/mcp-ssh-wingman/` - Main entry point
 - `internal/mcp/` - MCP protocol types and definitions
 - `internal/tmux/` - tmux session management
 - `internal/server/` - MCP server implementation
 - `examples/` - Configuration examples and test scripts
 
-### Core Components
+## Core Components
 
 **MCP Server (internal/server/)**
 - Implements JSON-RPC 2.0 protocol for MCP communication
@@ -68,18 +72,19 @@ go clean
 - JSON-RPC request/response structures
 - Tool and resource schemas
 
-### Available Tools
+## Available Tools
+
 1. `read_terminal` - Read current terminal content
 2. `read_scrollback` - Read scrollback history (configurable line count)
 3. `get_terminal_info` - Get terminal dimensions and metadata
 
-### Available Resources
+## Available Resources
+
 1. `terminal://current` - Current terminal content
 2. `terminal://info` - Terminal information and metadata
 
-## Configuration
+## Claude Desktop Integration
 
-### Claude Desktop Integration
 Add to Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 ```json
 {
@@ -91,14 +96,6 @@ Add to Claude Desktop config (`~/Library/Application Support/Claude/claude_deskt
   }
 }
 ```
-
-## tmux Read-Only Access
-
-The server leverages tmux's read-only terminal sharing by:
-- Creating/attaching to detached tmux sessions
-- Using `capture-pane` for safe content reading
-- Never sending commands or keystrokes to the session
-- Allowing observation without modification
 
 ## License
 
