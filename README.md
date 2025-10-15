@@ -1,6 +1,6 @@
 # MCP SSH Wingman
 
-A Model Context Protocol (MCP) server that provides read-only access to Unix shell prompts via tmux. This enables AI assistants like Claude to safely observe terminal environments without executing commands.
+A Model Context Protocol (MCP) server that provides read-only access to Unix shell prompts via `tmux`. This enables AI assistants like Claude to safely observe terminal environments without executing commands.
 
 ## Features
 
@@ -9,6 +9,18 @@ A Model Context Protocol (MCP) server that provides read-only access to Unix she
 - 📜 **Scrollback history** - Access historical terminal output
 - 📊 **Terminal metadata** - Retrieve dimensions, current path, and session info
 - 🔌 **MCP protocol** - Standard protocol for AI assistant integration
+
+## FAQ
+
+### Will you be adding [GNU `screen`](https://www.gnu.org/software/screen/) support?
+
+Not in the immediate future. Although `screen` can be used for pair programming/debugging, it does not have any mechanism to enforce read only mode.
+
+Since the read-only safeguard is the main difference between this MCP and other [MCPs with ssh functionality](https://www.gnu.org/software/screen/)
+
+### Will you be adding [zellij](https://github.com/zellij-org/zellij/) support?
+
+In the future, possibly. https://github.com/zellij-org/zellij/issues/4348 needs to be implemented first, to ensure `zellij` has read-only functionality, just like `tmux`
 
 ## Prerequisites
 
@@ -163,14 +175,6 @@ MCP SSH Wingman is designed with security in mind:
 - Ensure the session name matches the one specified in configuration
 - Check that the tmux session has active panes
 
-
-## Features to Add
-
-- [zellij](https://github.com/zellij-org/zellij/) , once https://github.com/zellij-org/zellij/issues/4348 is implemented
-
-## License
-
-BSD 3-Clause License - see [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
