@@ -28,6 +28,11 @@ func NewManager(sessionName string) *Manager {
 
 // EnsureSession ensures a tmux session exists, creating it if necessary
 func (m *Manager) EnsureSession() error {
+	// First check if tmux is installed
+	if err := checkTmuxInstalled(); err != nil {
+		return err
+	}
+
 	// Check if session exists
 	exists, err := m.SessionExists()
 	if err != nil {
@@ -37,11 +42,27 @@ func (m *Manager) EnsureSession() error {
 	if !exists {
 		// Create new session in detached mode
 		cmd := exec.Command("tmux", "new-session", "-d", "-s", m.sessionName)
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+
 		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to create tmux session: %w", err)
+			return fmt.Errorf("failed to create tmux session '%s': %w (stderr: %s)", m.sessionName, err, stderr.String())
 		}
 	}
 
+	return nil
+}
+
+// checkTmuxInstalled verifies that tmux is installed and accessible
+func checkTmuxInstalled() error {
+	cmd := exec.Command("tmux", "-V")
+	err := cmd.Run()
+	if err != nil {
+		if _, ok := err.(*exec.ExitError); ok {
+			return fmt.Errorf("tmux is not installed or not in PATH")
+		}
+		return fmt.Errorf("failed to verify tmux installation: %w", err)
+	}
 	return nil
 }
 

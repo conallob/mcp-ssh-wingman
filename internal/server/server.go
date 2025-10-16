@@ -39,6 +39,18 @@ func NewServer(sessionName string, reader io.Reader, writer io.Writer) *Server {
 func (s *Server) Start() error {
 	// Ensure tmux session exists
 	if err := s.tmuxManager.EnsureSession(); err != nil {
+		// Send a proper JSON-RPC error response before returning
+		encoder := json.NewEncoder(s.writer)
+		errorResponse := &mcp.JSONRPCResponse{
+			JSONRPC: "2.0",
+			ID:      nil, // No request ID yet
+			Error: &mcp.JSONRPCError{
+				Code:    -32603, // Internal error
+				Message: fmt.Sprintf("Failed to setup tmux session: %s. Please ensure tmux is installed and the specified session exists or can be created.", err.Error()),
+			},
+		}
+		// Best-effort attempt to send error response
+		_ = encoder.Encode(errorResponse)
 		return fmt.Errorf("failed to setup tmux session: %w", err)
 	}
 
