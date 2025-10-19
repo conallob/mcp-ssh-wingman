@@ -84,6 +84,15 @@ func (m *Manager) SessionExists() (bool, error) {
 
 // CapturePane captures the current pane content
 func (m *Manager) CapturePane() (string, error) {
+	// First verify the session exists
+	exists, err := m.SessionExists()
+	if err != nil {
+		return "", fmt.Errorf("failed to check session: %w", err)
+	}
+	if !exists {
+		return "", fmt.Errorf("session '%s' does not exist", m.sessionName)
+	}
+
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
@@ -91,7 +100,7 @@ func (m *Manager) CapturePane() (string, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return "", fmt.Errorf("failed to capture pane: %w (stderr: %s)", err, stderr.String())
 	}
@@ -101,6 +110,15 @@ func (m *Manager) CapturePane() (string, error) {
 
 // GetPaneInfo returns information about the current pane
 func (m *Manager) GetPaneInfo() (map[string]string, error) {
+	// First verify the session exists
+	exists, err := m.SessionExists()
+	if err != nil {
+		return nil, fmt.Errorf("failed to check session: %w", err)
+	}
+	if !exists {
+		return nil, fmt.Errorf("session '%s' does not exist", m.sessionName)
+	}
+
 	var stdout bytes.Buffer
 
 	// Get pane format info: width, height, current path, pane index
@@ -109,7 +127,7 @@ func (m *Manager) GetPaneInfo() (map[string]string, error) {
 		"-p", "#{pane_width},#{pane_height},#{pane_current_path},#{pane_index}")
 	cmd.Stdout = &stdout
 
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get pane info: %w", err)
 	}
@@ -129,13 +147,22 @@ func (m *Manager) GetPaneInfo() (map[string]string, error) {
 
 // GetScrollbackHistory gets the scrollback history from the pane
 func (m *Manager) GetScrollbackHistory(lines int) (string, error) {
+	// First verify the session exists
+	exists, err := m.SessionExists()
+	if err != nil {
+		return "", fmt.Errorf("failed to check session: %w", err)
+	}
+	if !exists {
+		return "", fmt.Errorf("session '%s' does not exist", m.sessionName)
+	}
+
 	var stdout bytes.Buffer
 
 	linesArg := fmt.Sprintf("-%d", lines)
 	cmd := exec.Command("tmux", "capture-pane", "-t", m.sessionName, "-p", "-S", linesArg)
 	cmd.Stdout = &stdout
 
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return "", fmt.Errorf("failed to capture scrollback: %w", err)
 	}
