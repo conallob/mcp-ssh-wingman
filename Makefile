@@ -25,6 +25,11 @@ test:
 	@echo "Running tests..."
 	@go test -v ./...
 
+coverage:
+	@echo "Running tests with coverage..."
+	@go test -coverprofile=coverage.out -covermode=atomic ./...
+	@go tool cover -html=coverage.out -o coverage.html
+
 run: build
 	@echo "Running $(BINARY_NAME)..."
 	@$(BUILD_DIR)/$(BINARY_NAME)
