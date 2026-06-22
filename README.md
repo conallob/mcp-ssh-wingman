@@ -1,5 +1,12 @@
 # MCP SSH Wingman
 
+[![Test](https://github.com/conallob/mcp-ssh-wingman/workflows/Test/badge.svg)](https://github.com/conallob/mcp-ssh-wingman/actions)
+[![Go Report Card](https://goreportcard.com/badge/github.com/conallob/mcp-ssh-wingman)](https://goreportcard.com/report/github.com/conallob/mcp-ssh-wingman)
+[![codecov](https://codecov.io/gh/conallob/mcp-ssh-wingman/branch/main/graph/badge.svg)](https://codecov.io/gh/conallob/mcp-ssh-wingman)
+[![Go Version](https://img.shields.io/badge/Go-1.24%2B-blue)](https://go.dev/)
+[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow.svg?style=flat&logo=buy-me-a-coffee)](https://www.buymeacoffee.com/conallob)
+
 A Model Context Protocol (MCP) server that provides read-only access to Unix shell prompts via `tmux`. This enables AI assistants like Claude to safely observe terminal environments without executing commands.
 
 ## Features
