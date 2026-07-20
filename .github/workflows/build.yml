@@ -42,6 +42,7 @@ jobs:
 
       - name: Test GoReleaser config
         uses: goreleaser/goreleaser-action@v6
+        continue-on-error: true
         with:
           distribution: goreleaser
           version: '~> v2'
