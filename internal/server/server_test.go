@@ -388,6 +388,52 @@ func TestServer_callTool_UnknownTool(t *testing.T) {
 	}
 }
 
+func TestServer_callTool_MarshalError(t *testing.T) {
+	srv := NewServer("test-session", &bytes.Buffer{}, &bytes.Buffer{})
+
+	request := &mcp.JSONRPCRequest{
+		JSONRPC: "2.0",
+		ID:      14,
+		Method:  "tools/call",
+		Params:  make(chan int), // channels cannot be marshaled to JSON
+	}
+
+	response := srv.handleRequest(request)
+
+	if response == nil {
+		t.Fatal("handleRequest() returned nil")
+	}
+	if response.Error == nil {
+		t.Fatal("response.Error is nil, expected marshal error")
+	}
+	if !strings.Contains(response.Error.Message, "marshal") {
+		t.Errorf("response.Error.Message = %v, should mention marshal failure", response.Error.Message)
+	}
+}
+
+func TestServer_readResource_MarshalError(t *testing.T) {
+	srv := NewServer("test-session", &bytes.Buffer{}, &bytes.Buffer{})
+
+	request := &mcp.JSONRPCRequest{
+		JSONRPC: "2.0",
+		ID:      15,
+		Method:  "resources/read",
+		Params:  make(chan int), // channels cannot be marshaled to JSON
+	}
+
+	response := srv.handleRequest(request)
+
+	if response == nil {
+		t.Fatal("handleRequest() returned nil")
+	}
+	if response.Error == nil {
+		t.Fatal("response.Error is nil, expected marshal error")
+	}
+	if !strings.Contains(response.Error.Message, "marshal") {
+		t.Errorf("response.Error.Message = %v, should mention marshal failure", response.Error.Message)
+	}
+}
+
 func TestServer_readResource_Current(t *testing.T) {
 	srv := NewServer("test-session", &bytes.Buffer{}, &bytes.Buffer{})
 
