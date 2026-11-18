@@ -41,7 +41,7 @@ jobs:
           go-version: '1.25'
 
       - name: Test GoReleaser config
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@v7
         continue-on-error: true
         with:
           distribution: goreleaser
@@ -49,7 +49,7 @@ jobs:
           args: check
 
       - name: Test release build (snapshot)
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
           version: '~> v2'
